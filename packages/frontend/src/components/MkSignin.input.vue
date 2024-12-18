@@ -53,7 +53,15 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<p :class="$style.orMsg">{{ i18n.ts.or }}</p>
 		</div>
 		<div>
-			<MkButton
+			<appkit-button
+				 style="margin: auto auto;"
+				large
+				rounded
+				primary
+				gradate
+				@click="signInWithWallet">
+			</appkit-button>
+			<!-- <MkButton
 				type="submit"
 				style="margin: auto auto;"
 				large
@@ -63,8 +71,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				@click="onWalletConnect"
 				>
 					<i class="ti ti-wallet" style="font-size: medium;"></i>{{ i18n.ts.signinWithWalletConnect }}
-			</MkButton>
-			<!--  @click="emit('walletConnectClick', $event)" > -->
+			</MkButton> -->
 		</div>
 
 	</div>
@@ -85,15 +92,7 @@ import MkButton from '@/components/MkButton.vue';
 import MkInput from '@/components/MkInput.vue';
 import MkInfo from '@/components/MkInfo.vue';
 
-import { walletLogin } from '@/account.js'; // Path to account.ts
-
-async function onWalletConnect() {
-  try {
-    await walletLogin(); // Trigger wallet login
-  } catch (err) {
-    console.error('WalletConnect login failed:', err);
-  }
-}
+import { appKit } from '@/account';
 
 const props = withDefaults(defineProps<{
 	message?: string,
@@ -169,6 +168,38 @@ async function specifyHostAndOpenRemote(options: OpenOnRemoteOptions): Promise<v
 	openRemote(options, targetHost);
 }
 //#endregion
+import { getAppKit } from '@/account'; // Adjust path to your account.ts
+
+async function signInWithWallet() {
+  try {
+    // Step 1: Initialize AppKit on demand
+    const appKit = getAppKit();
+
+    // Step 2: Open WalletConnect modal
+    await appKit.open();
+
+    // Step 3: Retrieve connected wallet details
+    const { publicKey } = await appKit.getActiveAccount();
+    const userAddress = await publicKey.toString();
+
+    console.log('Connected Wallet Address:', userAddress);
+
+    // Step 4: Sign a message to confirm wallet ownership
+    const message = `Login to Misskey with wallet at ${new Date().toISOString()}`;
+    const signedMessage = await appKit.signMessage(message);
+
+    console.log('Signed Message:', signedMessage);
+
+    // Step 5: Store or display results temporarily
+    localStorage.setItem('walletAddress', userAddress);
+    localStorage.setItem('signedMessage', signedMessage);
+
+    alert(`Sign-In Successful:\nAddress: ${userAddress}\nSigned Message: ${signedMessage}`);
+  } catch (error) {
+    console.error('Sign-In Error:', error);
+    alert('Sign-In Failed. Please try again.');
+  }
+}
 </script>
 
 <style lang="scss" module>

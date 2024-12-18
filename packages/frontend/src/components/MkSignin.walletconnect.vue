@@ -1,43 +1,30 @@
-<!-- MkSignin.walletconnect.vue -->
 <template>
-  <div :class="$style.walletConnectRoot">
-    <button :class="$style.walletConnectButton" @click="onWalletConnect">
-      Login with WalletConnect
-    </button>
+  <div class="walletconnect-container">
+    <h3>{{ i18n.ts.connectWallet }}</h3>
+    <appkit-button></appkit-button>
+    <div v-if="loading" class="loading-indicator">{{ i18n.ts.loading }}</div>
+    <div v-if="error" class="error-message">{{ error }}</div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { walletLogin } from '@/account'; // Import the walletLogin function
+import { ref } from 'vue';
+import { walletLogin } from '@/account'; // Import updated walletLogin function
+import { i18n } from '@/i18n.js';
 
-async function onWalletConnect() {
-  try {
-    await walletLogin(); // Trigger WalletConnect login
-  } catch (error) {
-    console.error('WalletConnect login error:', error);
-  }
-}
+const loading = ref(false);
+const error = ref<string | null>(null);
 </script>
 
-<style lang="scss" module>
-.walletConnectRoot {
-  margin-top: 20px;
-  display: flex;
-  justify-content: center;
+<style scoped>
+
+.loading-indicator {
+  margin-top: 10px;
+  color: #888;
 }
 
-.walletConnectButton {
-  background-color: var(--MI_THEME-button-primary-bg);
-  color: var(--MI_THEME-button-primary-text);
-  border: none;
-  border-radius: 4px;
-  padding: 10px 20px;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background-color 0.2s;
-
-  &:hover {
-    background-color: var(--MI_THEME-button-primary-hover-bg);
-  }
+.error-message {
+  margin-top: 10px;
+  color: red;
 }
 </style>

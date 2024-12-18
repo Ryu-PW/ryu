@@ -16,82 +16,39 @@ import { misskeyApi } from '@/scripts/misskey-api.js';
 import { unisonReload, reloadChannel } from '@/scripts/unison-reload.js';
 
 // CHANGE: imports for walletconnect
+import { createAppKit } from '@reown/appkit/react';
 import { SolanaAdapter } from '@reown/appkit-adapter-solana/react';
 import { solana, solanaTestnet, solanaDevnet } from '@reown/appkit/networks';
 import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets';
-import { createAppKit } from '@reown/appkit';
-import { login } from '@/account.js'; // Adjust path to your Misskey login function
 
-// 1. Load Project ID
-export const projectId = 'ed9c3dd393ccbe69b5936ff8244fa97d';
-
-if (!projectId) {
-  throw new Error('Project ID is not defined.');
-}
-
-// 2. Solana Wallets Configuration
-export const solanaWeb3JsAdapter = new SolanaAdapter({
-  wallets: [new PhantomWalletAdapter(), new SolflareWalletAdapter()],
-});
-
-// 3. Networks Configuration
-export const networks = [solana, solanaTestnet, solanaDevnet];
-
-// 4. Metadata for WalletConnect
+// Prepare metadata and projectId
+const projectId = 'ed9c3dd393ccbe69b5936ff8244fa97d';
 const metadata = {
   name: 'Ryu',
   description: 'The Meta Social Network',
-  url: 'https://ryu.pw',
+  url: 'https://ryu.pw', // Ensure this matches your domain
   icons: ['https://avatars.githubusercontent.com/u/179229932'],
 };
 
-// 5. Initialize Reown AppKit
-const appKit = createAppKit({
-  adapters: [solanaWeb3JsAdapter],
-  projectId,
-  networks: networks,
-  features: {
-    analytics: true, // Enable analytics (optional)
-    email: true, // Enable email-based authentication
-    socials: ['google', 'x', 'github', 'discord', 'farcaster'], // Social login options
-    emailShowWallets: true, // Show wallets on email login
-  },
-  themeMode: 'light', // Set theme mode
-  metadata, // Add app metadata
-});
+let appKit = null; // Defer initialization
 
-// 6. Wallet Login Function
-export async function walletLogin(): Promise<void> {
-  try {
-    console.log('Triggering WalletConnect...');
+export function getAppKit() {
+  if (!appKit) {
+    const solanaWeb3JsAdapter = new SolanaAdapter({
+      wallets: [new PhantomWalletAdapter(), new SolflareWalletAdapter()],
+    });
 
-    // Connect to Wallet
-    const wallet = await appKit.connect();
-    if (!wallet || !wallet.accounts) {
-      throw new Error('No wallet accounts found. Please check your wallet.');
-    }
-
-    const publicKey = wallet.accounts[0].address;
-    console.log('Wallet Connected:', publicKey);
-
-    // Retrieve session token
-    const sessionToken = wallet.sessionToken;
-    if (!sessionToken) {
-      throw new Error('Session token not received from WalletConnect.');
-    }
-
-    console.log('Session Token:', sessionToken);
-
-    // Use session token to log in via Misskey login function
-    await login(sessionToken);
-  } catch (error) {
-    console.error('WalletConnect Login Error:', error);
-    alert({
-      type: 'error',
-      title: 'Wallet Login Failed',
-      text: error.message || 'An unknown error occurred.',
+    appKit = createAppKit({
+      adapters: [solanaWeb3JsAdapter],
+      networks: [solana, solanaTestnet, solanaDevnet],
+      metadata,
+      projectId,
+      features: {
+        analytics: true, // Optional
+      },
     });
   }
+  return appKit;
 }
 
 // TODO: 他のタブと永続化された
