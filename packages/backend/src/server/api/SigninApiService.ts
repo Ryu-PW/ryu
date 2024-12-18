@@ -134,6 +134,8 @@ export class SigninApiService {
 		const profile = await this.userProfilesRepository.findOneByOrFail({ userId: user.id });
 		const securityKeysAvailable = await this.userSecurityKeysRepository.countBy({ userId: user.id }).then(result => result >= 1);
 
+		const useWalletConnectEnabled = await this.userSecurityKeysRepository.countBy({ userId: user.id }).then(result => result >= 1);
+
 		if (password == null) {
 			reply.code(200);
 			if (profile.twoFactorEnabled) {
@@ -258,6 +260,12 @@ export class SigninApiService {
 				finished: false,
 				next: 'passkey',
 				authRequest,
+			} satisfies Misskey.entities.SigninFlowResponse;
+		} else if (useWalletConnectEnabled) {
+			reply.code(200);
+			return {
+				finished: false,
+				next: 'walletconnect',
 			} satisfies Misskey.entities.SigninFlowResponse;
 		} else {
 			if (!same || !profile.twoFactorEnabled) {

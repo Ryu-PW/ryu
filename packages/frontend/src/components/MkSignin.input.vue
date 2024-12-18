@@ -48,6 +48,25 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<i class="ti ti-device-usb" style="font-size: medium;"></i>{{ i18n.ts.signinWithPasskey }}
 			</MkButton>
 		</div>
+		<!-- パスワードレスログイン -->
+		<div :class="$style.orHr">
+			<p :class="$style.orMsg">{{ i18n.ts.or }}</p>
+		</div>
+		<div>
+			<MkButton
+				type="submit"
+				style="margin: auto auto;"
+				large
+				rounded
+				primary
+				gradate
+				@click="onWalletConnect"
+				>
+					<i class="ti ti-wallet" style="font-size: medium;"></i>{{ i18n.ts.signinWithWalletConnect }}
+			</MkButton>
+			<!--  @click="emit('walletConnectClick', $event)" > -->
+		</div>
+
 	</div>
 </div>
 </template>
@@ -65,6 +84,16 @@ import * as os from '@/os.js';
 import MkButton from '@/components/MkButton.vue';
 import MkInput from '@/components/MkInput.vue';
 import MkInfo from '@/components/MkInfo.vue';
+
+import { walletLogin } from '@/account.js'; // Path to account.ts
+
+async function onWalletConnect() {
+  try {
+    await walletLogin(); // Trigger wallet login
+  } catch (err) {
+    console.error('WalletConnect login failed:', err);
+  }
+}
 
 const props = withDefaults(defineProps<{
 	message?: string,

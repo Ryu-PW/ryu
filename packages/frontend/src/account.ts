@@ -15,7 +15,86 @@ import { waiting, popup, popupMenu, success, alert } from '@/os.js';
 import { misskeyApi } from '@/scripts/misskey-api.js';
 import { unisonReload, reloadChannel } from '@/scripts/unison-reload.js';
 
-// TODO: 他のタブと永続化されたstateを同期
+// CHANGE: imports for walletconnect
+import { SolanaAdapter } from '@reown/appkit-adapter-solana/react';
+import { solana, solanaTestnet, solanaDevnet } from '@reown/appkit/networks';
+import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets';
+import { createAppKit } from '@reown/appkit';
+import { login } from '@/account.js'; // Adjust path to your Misskey login function
+
+// 1. Load Project ID
+export const projectId = 'ed9c3dd393ccbe69b5936ff8244fa97d';
+
+if (!projectId) {
+  throw new Error('Project ID is not defined.');
+}
+
+// 2. Solana Wallets Configuration
+export const solanaWeb3JsAdapter = new SolanaAdapter({
+  wallets: [new PhantomWalletAdapter(), new SolflareWalletAdapter()],
+});
+
+// 3. Networks Configuration
+export const networks = [solana, solanaTestnet, solanaDevnet];
+
+// 4. Metadata for WalletConnect
+const metadata = {
+  name: 'Ryu',
+  description: 'The Meta Social Network',
+  url: 'https://ryu.pw',
+  icons: ['https://avatars.githubusercontent.com/u/179229932'],
+};
+
+// 5. Initialize Reown AppKit
+const appKit = createAppKit({
+  adapters: [solanaWeb3JsAdapter],
+  projectId,
+  networks: networks,
+  features: {
+    analytics: true, // Enable analytics (optional)
+    email: true, // Enable email-based authentication
+    socials: ['google', 'x', 'github', 'discord', 'farcaster'], // Social login options
+    emailShowWallets: true, // Show wallets on email login
+  },
+  themeMode: 'light', // Set theme mode
+  metadata, // Add app metadata
+});
+
+// 6. Wallet Login Function
+export async function walletLogin(): Promise<void> {
+  try {
+    console.log('Triggering WalletConnect...');
+
+    // Connect to Wallet
+    const wallet = await appKit.connect();
+    if (!wallet || !wallet.accounts) {
+      throw new Error('No wallet accounts found. Please check your wallet.');
+    }
+
+    const publicKey = wallet.accounts[0].address;
+    console.log('Wallet Connected:', publicKey);
+
+    // Retrieve session token
+    const sessionToken = wallet.sessionToken;
+    if (!sessionToken) {
+      throw new Error('Session token not received from WalletConnect.');
+    }
+
+    console.log('Session Token:', sessionToken);
+
+    // Use session token to log in via Misskey login function
+    await login(sessionToken);
+  } catch (error) {
+    console.error('WalletConnect Login Error:', error);
+    alert({
+      type: 'error',
+      title: 'Wallet Login Failed',
+      text: error.message || 'An unknown error occurred.',
+    });
+  }
+}
+
+// TODO: 他のタブと永続化された
 
 type Account = Misskey.entities.MeDetailed & { token: string };
 
@@ -340,20 +419,35 @@ export async function openAccountMenu(opts: {
 }
 
 export function getAccountWithSigninDialog(): Promise<{ id: string, token: string } | null> {
-	return new Promise((resolve) => {
-		const { dispose } = popup(defineAsyncComponent(() => import('@/components/MkSigninDialog.vue')), {}, {
-			done: async (res: Misskey.entities.SigninFlowResponse & { finished: true }) => {
-				await addAccount(res.id, res.i);
-				resolve({ id: res.id, token: res.i });
-			},
-			cancelled: () => {
-				resolve(null);
-			},
-			closed: () => {
-				dispose();
-			},
-		});
-	});
+    return new Promise((resolve) => {
+        const { dispose } = popup(
+            defineAsyncComponent(() => import('@/components/MkSigninDialog.vue')),
+            {
+                additionalLoginMethods: [
+                    {
+                        text: i18n.ts.loginWithWallet, // Add "Login with Wallet"
+                        action: async () => {
+                            try {
+                                await walletLogin(); // Call WalletConnect login
+                                dispose(); // Close dialog on success
+                                resolve(null);
+                            } catch (e) {
+                                console.error(e);
+                            }
+                        },
+                    },
+                ],
+            },
+            {
+                done: async (res: Misskey.entities.SigninFlowResponse & { finished: true }) => {
+                    await addAccount(res.id, res.i);
+                    resolve({ id: res.id, token: res.i });
+                },
+                cancelled: () => resolve(null),
+                closed: () => dispose(),
+            }
+        );
+    });
 }
 
 export function getAccountWithSignupDialog(): Promise<{ id: string, token: string } | null> {

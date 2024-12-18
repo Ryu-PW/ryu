@@ -23,6 +23,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 			@usernameSubmitted="onUsernameSubmitted"
 			@passkeyClick="onPasskeyLogin"
+			@walletConnectClick="onWalletConnect"
 		/>
 
 		<!-- 2. パスワード入力 -->
@@ -56,6 +57,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 			@done="onPasskeyDone"
 			@useTotp="onUseTotp"
 		/>
+		
+		<XWalletConnect v-else-if="page === 'walletconnect'" key="walletconnect"  />
 	</Transition>
 	<div v-if="waiting" :class="$style.waitingRoot">
 		<MkLoading/>
@@ -81,6 +84,8 @@ import XPassword, { type PwResponse } from '@/components/MkSignin.password.vue';
 import XTotp from '@/components/MkSignin.totp.vue';
 import XPasskey from '@/components/MkSignin.passkey.vue';
 
+import XWalletConnect from '@/components/MkSignin.walletconnect.vue';
+
 const emit = defineEmits<{
 	(ev: 'login', v: Misskey.entities.SigninFlowResponse & { finished: true }): void;
 }>();
@@ -95,7 +100,7 @@ const props = withDefaults(defineProps<{
 	openOnRemote: undefined,
 });
 
-const page = ref<'input' | 'password' | 'totp' | 'passkey'>('input');
+const page = ref<'input' | 'password' | 'totp' | 'passkey' | 'walletconnect'>('input');
 const waiting = ref(false);
 
 const passwordPageEl = useTemplateRef('passwordPageEl');
@@ -152,6 +157,11 @@ function onPasskeyDone(credential: AuthenticationPublicKeyCredential): void {
 
 function onUseTotp(): void {
 	page.value = 'totp';
+}
+
+// Add a method to trigger WalletConnect page
+function onWalletConnect(): void {
+  page.value = 'walletconnect';
 }
 //#endregion
 
@@ -256,6 +266,10 @@ async function tryLogin(req: Partial<Misskey.entities.SigninFlowRequest>): Promi
 						page.value = 'totp';
 					}
 					break;
+				}
+				case 'walletconnect': {
+				    page.value = 'walletconnect';
+				    break;
 				}
 			}
 
