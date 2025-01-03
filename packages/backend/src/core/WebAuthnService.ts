@@ -26,6 +26,9 @@ import type {
 	RegistrationResponseJSON,
 } from '@simplewebauthn/types';
 
+import nacl from 'tweetnacl';
+import bs58 from 'bs58';
+
 @Injectable()
 export class WebAuthnService {
 	constructor(
@@ -242,6 +245,32 @@ export class WebAuthnService {
 		return key.userId;
 	}
 
+	/**
+         * Initiates a wallet-based login challenge.
+         * @param context A unique context identifier for the session.
+         * @returns The challenge message to be signed by the wallet.
+         */
+        @bindThis
+        public async initiateWalletLogin(context: string): Promise<string> {
+            const challenge = `Login to Ryu with wallet at ${new Date().toISOString()}`;
+            await this.redisClient.setex(`wallet-login:challenge:${context}`, 90, challenge);
+            return challenge; 
+        }
+        @bindThis
+        public async verifyWalletLogin(
+            context: string,
+            walletAddress: string,
+            signedMessage: string
+          ): Promise<boolean> {
+            const challenge = await this.redisClient.getdel(`wallet-login:challenge:${context}`);
+
+            if (!challenge) {
+                throw new IdentifiableError('2d16e51c-007b-4edd-afd2-f7dd02c947f6', `Challenge '${context}' not found`);
+            }
+
+            return this.verifyWalletSignature(walletAddress, signedMessage, challenge);
+        }
+
 	@bindThis
 	public async verifyAuthentication(userId: MiUser['id'], response: AuthenticationResponseJSON): Promise<boolean> {
 		const challenge = await this.redisClient.getdel(`webauthn:challenge:${userId}`);
@@ -323,4 +352,26 @@ export class WebAuthnService {
 
 		return verified;
 	}
+/**
+     * Verifies a signed message from a wallet.
+     * @param walletAddress The address of the wallet.
+     * @param signedMessage The signed message from the wallet.
+     * @param expectedMessage The original message that was signed.
+     * @returns True if the signature is valid, false otherwise.
+     */
+    @bindThis
+    public verifyWalletSignature(walletAddress: string, signedMessage: string, expectedMessage: string): boolean {
+        try {
+            const isValid = nacl.sign.detached.verify(
+                new TextEncoder().encode(expectedMessage),
+                bs58.decode(signedMessage),
+                bs58.decode(walletAddress)
+            );
+            return isValid;
+        } catch (error) {
+            console.error('Error verifying wallet signature:', error);
+            return false;
+        }
+    }
+
 }

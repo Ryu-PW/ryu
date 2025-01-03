@@ -1,0 +1,7 @@
+./packages/misskey-js/src/entities.ts
+./packages/misskey-js/src/api.types.ts
+./packages/misskey-js/etc/misskey-js.api.md
+./packages/backend/test/unit/SigninWithPasskeyApiService.ts
+./packages/backend/src/server/api/SigninWithPasskeyApiService.ts
+./packages/backend/src/server/api/ApiServerService.ts
+./packages/backend/src/server/ServerModule.ts

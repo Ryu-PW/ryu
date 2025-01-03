@@ -48,6 +48,16 @@ async function initializeAppKit() {
         analytics: true,
       },
     });
+
+    // Retrieve and log provider
+    const appKitProvider = await useAppKitProvider<Provider>('solana');
+    if (appKitProvider) {
+      walletProvider.value = appKitProvider.walletProvider || null;
+      console.log('Wallet provider initialized:', walletProvider.value);
+    } else {
+      console.warn('AppKit provider could not be initialized.');
+    }
+
     console.log('AppKit initialized successfully.');
   } catch (error) {
     console.error('Failed to initialize AppKit:', error);
@@ -58,77 +68,48 @@ async function initializeAppKit() {
 initializeAppKit();
 // Reactive states
 export const isWalletConnectActive = ref(false);
-export const isWalletUserRegistered = ref(false);
 export const walletAddress = ref(null);
-let walletProvider = null;
-export let walletSignature = null;
+const walletProvider = ref(null);
 
 export async function startWalletConnect() {
   try {
     console.log('Starting WalletConnect...');
     const appKit = await useAppKit();
 
-    // Get account details
-    const appKitAccountTest = useAppKitAccount(); // Reactive state
-    if (appKitAccountTest?.value?.address) {
-      walletAddress.value = appKitAccountTest.value.address || null;
-      isWalletConnectActive.value = !!appKitAccountTest.value.isConnected;
-
-      // check if user exists
-      isWalletUserRegistered.value = false;
-
-      console.log('Wallet is registered. Proceeding...');
-    } else {
-      console.log('No wallet account connected.');
-    }
-
-    // Get provider details
-    walletProvider = useAppKitProvider<Provider>('solana')
-
-    // Condition for connected wallet and provider
-    if (isWalletConnectActive.value && walletProvider) {
-      console.log('Wallet is already connected, signing message...');
-      await onWalletSignMessage(walletProvider);
-    } else {
-      console.log('Wallet is not connected. Opening WalletConnect UI...');
-      await appKit.open(); // Open wallet connect dialog
-    }
-
-    // Get account details
-    const appKitAccountRetest = useAppKitAccount(); // Reactive state
-    if (appKitAccountRetest?.value?.address) {
-      walletAddress.value = appKitAccountRetest.value.address || null;
-      isWalletConnectActive.value = !!appKitAccountRetest.value.isConnected;
+    const appKitAccount = await useAppKitAccount();
+    walletAddress.value = appKitAccount.value.address || null;
+    isWalletConnectActive.value = appKitAccount.value.isConnected;
     
-      // Automatically check if the user exists
-      
-      isWalletUserRegistered.value = false;
+    const appKitProv
 
-    }
+    if(isWalletConnectActive && walletProvider.value)
+      onWalletSignMessage();
+    else
+      appKit.open();
 
-    // Post-connection logging
-    console.log('Wallet connection status:', {
-      walletAddress: walletAddress.value,
-      isWalletConnectActive: isWalletConnectActive.value,
-      walletProvider: walletProvider,
-    });
+    const accountData = useAppKitAccount();
+    console.log('Wallet connected:', accountData.value || 'None');
+
+    console.log('Wallet connected:', walletAddress.value || 'None');
   } catch (error) {
     console.error('Wallet Connect Error:', error);
   }
 }
 
-export async function onWalletSignMessage(walletProvider: Provider['walletProvider']) {
+export async function onWalletSignMessage() {
   try {
-    // get provider if empty
-    console.log(walletProvider);
     // 2. Encode message and sign it
     const encodedMessage = new TextEncoder().encode('Login by Wallet to the Ryu Platform')
     console.log(encodedMessage);
-    const signature = await walletProvider.walletProvider.signMessage(encodedMessage);
+    const signature = await walletProvider.value.signMessage(encodedMessage);
     console.log(signature);
     if (signature){
       console.log("signed");
-      walletSignature = signature;
+      
+      emit('walletConnectClick', event);
+    }else{
+      // disconnect
+      console.log(signature);
     } 
   }catch (error) {
     console.error('Wallet Signature Error:', error);

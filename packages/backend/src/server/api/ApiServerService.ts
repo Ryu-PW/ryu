@@ -19,6 +19,7 @@ import { ApiCallService } from './ApiCallService.js';
 import { SignupApiService } from './SignupApiService.js';
 import { SigninApiService } from './SigninApiService.js';
 import { SigninWithPasskeyApiService } from './SigninWithPasskeyApiService.js';
+import { SigninWithWalletApiService } from './SigninWithWalletApiService.js';
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
 
 @Injectable()
@@ -40,6 +41,7 @@ export class ApiServerService {
 		private signupApiService: SignupApiService,
 		private signinApiService: SigninApiService,
 		private signinWithPasskeyApiService: SigninWithPasskeyApiService,
+		private signinWithWalletApiService: SigninWithWalletApiService,
 	) {
 		//this.createServer = this.createServer.bind(this);
 	}
@@ -144,6 +146,29 @@ export class ApiServerService {
 			};
 		}>('/signin-with-passkey', (request, reply) => this.signinWithPasskeyApiService.signin(request, reply));
 
+                fastify.post<{
+                    Body: { context: string };
+                }>('/signin-approve-wallet', async (request, reply) => {
+                    const { context } = request.body;
+                    if (!context) {
+                        reply.code(400).send({ error: { message: 'Missing context' } });
+                        return;
+                    }
+
+                    const challenge = await this.signinWithWalletApiService.initiateWalletLogin(context);
+                    reply.send({ challenge });
+                });
+
+		fastify.post<{
+                    Body: {
+                        walletAddress: string;
+                        signedMessage: string; 
+                        challenge: string;
+                    };
+                }>('/signin-with-wallet', (request, reply) => {
+                    this.signinWithWalletApiService.signin(request, reply);
+                });
+
 		fastify.post<{ Body: { code: string; } }>('/signup-pending', (request, reply) => this.signupApiService.signupPending(request, reply));
 
 		fastify.get('/v1/instance/peers', async (request, reply) => {
@@ -194,6 +219,30 @@ export class ApiServerService {
 				},
 			});
 		});
+
+                fastify.post<{
+                    Body: { walletAddress: string };
+                }>('/api/initiate-wallet-challenge', async (request, reply) => {
+                    const { walletAddress } = request.body;
+
+                    if (!walletAddress) {
+                        reply.code(400).send({ error: { message: 'Missing walletAddress' } });
+                        return;
+                    }
+
+                    try {
+                        const challenge = await this.signinWithWalletApiService.generateChallenge(walletAddress);
+                        reply.send({ challenge });
+                    } catch (error) {
+                        reply.code(500).send({ error: 'Internal Server Error', details: error.message });
+                    }
+                });
+
+                fastify.post<{
+                    Body: { walletAddress: string };
+                }>('/api/check-user', (request, reply) => { 
+                    this.signinWithWalletApiService.checkUser(request, reply);
+                });
 
 		done();
 	}

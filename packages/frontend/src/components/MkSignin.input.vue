@@ -4,18 +4,18 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<div :class="$style.wrapper" data-cy-signin-page-input>
-	<div :class="$style.root">
-		<div :class="$style.avatar">
-			<i class="ti ti-user"></i>
-		</div>
+ <div :class="$style.wrapper" data-cy-signin-page-input>
+        <div :class="$style.root">
+                <div :class="$style.avatar">
+                        <i class="ti ti-user"></i>
+                </div>
 
-		<!-- ログイン画面メッセージ -->
-		<MkInfo v-if="message">
-			{{ message }}
-		</MkInfo>
+                <!-- ログイン画面メッセージ -->
+                <MkInfo v-if="message">
+                        {{ message }}
+                </MkInfo>
 
-		<!-- 外部サーバーへの転送 -->
+                <!-- 外部サーバーへの転送 -->
 		<div v-if="openOnRemote" class="_gaps_m">
 			<div class="_gaps_s">
 				<MkButton type="button" rounded primary style="margin: 0 auto;" @click="openRemote(openOnRemote)">
@@ -52,27 +52,17 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<div :class="$style.orHr">
 			<p :class="$style.orMsg">{{ i18n.ts.or }}</p>
 		</div>
-		<div>
+		<!-- <div>
 			<appkit-button
 				 style="margin: auto auto;"
 				large
 				rounded
 				primary
 				gradate
-				@click="signInWithWallet">
-			</appkit-button>
-			<!-- <MkButton
-				type="submit"
-				style="margin: auto auto;"
-				large
-				rounded
-				primary
-				gradate
-				@click="onWalletConnect"
-				>
-					<i class="ti ti-wallet" style="font-size: medium;"></i>{{ i18n.ts.signinWithWalletConnect }}
-			</MkButton> -->
-		</div>
+				@click="startWalletConnectFlow">
+			        Login by WalletConnect
+                        </appkit-button>
+		</div> -->
 
 	</div>
 </div>
@@ -92,7 +82,9 @@ import MkButton from '@/components/MkButton.vue';
 import MkInput from '@/components/MkInput.vue';
 import MkInfo from '@/components/MkInfo.vue';
 
-import { appKit } from '@/account';
+import { useAppKit, useAppKitAccount, useAppKitProvider } from '@reown/appkit/vue';
+import { isWalletConnectActive, startWalletConnect } from '@/account'; // Adjust path to your account.ts;
+import type { Provider } from '@reown/appkit-adapter-solana';
 
 const props = withDefaults(defineProps<{
 	message?: string,
@@ -105,6 +97,8 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
 	(ev: 'usernameSubmitted', v: string): void;
 	(ev: 'passkeyClick', v: MouseEvent): void;
+	(ev: 'walletConnectClick', v: MouseEvent): void;
+
 }>();
 
 const host = toUnicode(configHost);
@@ -168,38 +162,50 @@ async function specifyHostAndOpenRemote(options: OpenOnRemoteOptions): Promise<v
 	openRemote(options, targetHost);
 }
 //#endregion
-import { getAppKit } from '@/account'; // Adjust path to your account.ts
-
-async function signInWithWallet() {
+/*function onWalletConnectClick() {
   try {
-    // Step 1: Initialize AppKit on demand
-    const appKit = getAppKit();
+    let walletaddress = getWalletAddress();
+    isWalletConnectActive.value = true; // Hide the root container
+    const appKit = useAppKit();
+//    const appKit = getAppKit(); // Initialize WalletConnect logic
+    //console.log('Available Networks:', appKit.getNetworks());
+    console.log(appKit);
 
-    // Step 2: Open WalletConnect modal
-    await appKit.open();
+    // Open WalletConnect dialog
+    appKit.open();
+    console.log('WalletConnect dialog opened');
 
-    // Step 3: Retrieve connected wallet details
-    const { publicKey } = await appKit.getActiveAccount();
-    const userAddress = await publicKey.toString();
+    // Get active account
+    walletAddress = useAppKitAccount();
+    setWalletAddress(walletAddress);
+    console.log('Wallet Address:', walletAddress);
 
-    console.log('Connected Wallet Address:', userAddress);
-
-    // Step 4: Sign a message to confirm wallet ownership
-    const message = `Login to Misskey with wallet at ${new Date().toISOString()}`;
-    const signedMessage = await appKit.signMessage(message);
-
+    const message = new TextEncoder().encode(`Login to Misskey with wallet at ${new Date().toISOString()}`);
+    const { walletProvider } = useAppKitProvider<Provider>('solana');
+    
+    const signedMessage = walletProvider.signMessage(message);
     console.log('Signed Message:', signedMessage);
 
-    // Step 5: Store or display results temporarily
-    localStorage.setItem('walletAddress', userAddress);
-    localStorage.setItem('signedMessage', signedMessage);
-
-    alert(`Sign-In Successful:\nAddress: ${userAddress}\nSigned Message: ${signedMessage}`);
+    if (signedMessage)
+	emit('walletConnectClick', event);
   } catch (error) {
-    console.error('Sign-In Error:', error);
-    alert('Sign-In Failed. Please try again.');
-  }
-}
+    console.error('WalletConnect Error:', error);
+    onSigninApiError(error); // Use your existing error handler
+  } finally {
+    isWalletConnectActive.value = false; // Show the root container again
+ }
+}*/
+
+async function startWalletConnectFlow() {
+      try {
+        await startWalletConnect(); // Start WalletConnect
+      } catch (error) {
+        console.error('Error during WalletConnect:', error);
+      } finally {
+        isWalletConnectActive.value = false;
+      } 
+}    
+
 </script>
 
 <style lang="scss" module>
@@ -263,4 +269,5 @@ async function signInWithWallet() {
 	left: 50%;
 	transform: translateX(-50%);
 }
+
 </style>

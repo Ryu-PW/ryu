@@ -276,6 +276,13 @@ export class MiUser {
 	})
 	public token: string | null;
 
+	@Column('varchar', {
+		length: 512,
+		nullable: true,
+		comment: 'The wallet address of the user.',
+	})
+	public walletAddress: string | null;
+
 	constructor(data: Partial<MiUser>) {
 		if (data == null) return;
 

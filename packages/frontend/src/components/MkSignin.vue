@@ -23,7 +23,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 			@usernameSubmitted="onUsernameSubmitted"
 			@passkeyClick="onPasskeyLogin"
-			@walletConnectClick="onWalletConnect"
+			@walletConnectClick="onWalletConnectClick"
 		/>
 
 		<!-- 2. パスワード入力 -->
@@ -57,8 +57,16 @@ SPDX-License-Identifier: AGPL-3.0-only
 			@done="onPasskeyDone"
 			@useTotp="onUseTotp"
 		/>
-		
-		<XWalletConnect v-else-if="page === 'walletconnect'" key="walletconnect"  />
+	
+		<XWalletConnect
+			v-else-if="page === 'wallet'"
+			key="wallet"
+
+			:credentialRequest="credentialRequest!"
+			:isPerformingWalletLogin="doingWalletLogin"
+			@done="onWalletConnectDone"
+		/>
+
 	</Transition>
 	<div v-if="waiting" :class="$style.waitingRoot">
 		<MkLoading/>
@@ -159,9 +167,57 @@ function onUseTotp(): void {
 	page.value = 'totp';
 }
 
-// Add a method to trigger WalletConnect page
-function onWalletConnect(): void {
-  page.value = 'walletconnect';
+//#region WalletConnect
+const walletConnectContext = ref('');
+const doingWalletLogin = ref(false);
+
+async function onWalletConnectClick() {
+    if (webAuthnSupported()) {
+      doingWalletLogin.value = true;
+      waiting.value = true;
+
+      // Make API call to backend for WalletConnect login
+      await misskeyApi('signin-with-wallet', {
+        getWalletAddress,
+        signedMessage,
+        context: walletConnectContext.value || null,
+      })
+        .then((res) => {
+          if (res.signinResponse == null) {
+            onSigninApiError();
+            return;
+          }
+          emit('login', res.signinResponse);
+        })
+        .catch(onSigninApiError);
+    }
+}
+
+function onWalletConnectDone(): void {
+	waiting.value = true;
+
+	if (doingWalletConnet.value) {
+		misskeyApi('signin-with-wallet', {
+			walletAddress: walletAddress.value,
+			signedMessage: signedMessage.value,
+			context: walletConnectContext.value,
+		}).then((res) => {
+			if (res.signinResponse == null) {
+				onSigninApiError();
+				return;
+			}
+			emit('login', res.signinResponse);
+		}).catch(onSigninApiError);
+
+	} else if (userInfo.value != null) {
+		tryLogin({
+			username: userInfo.value.username,
+			password: password.value,
+			credential: credential.toJSON(),
+			walletAddress: walletAddress.value, 
+		});
+	}
+
 }
 //#endregion
 
@@ -267,9 +323,10 @@ async function tryLogin(req: Partial<Misskey.entities.SigninFlowRequest>): Promi
 					}
 					break;
 				}
-				case 'walletconnect': {
-				    page.value = 'walletconnect';
-				    break;
+				case 'wallet': {
+					needCaptcha.value = false;
+					page.value = 'wallet';
+					break;
 				}
 			}
 
@@ -278,8 +335,13 @@ async function tryLogin(req: Partial<Misskey.entities.SigninFlowRequest>): Promi
 				page.value = 'input';
 				password.value = '';
 			}
+			if (doingWalletConnectFromInputPage.value === true) {
+				doingWalletConnectFromInputPage.value = false;
+				page.value = 'input';
+				password.value = '';
+			}
 			passwordPageEl.value?.resetCaptcha();
-			nextTick(() => {
+				nextTick(() => {
 				waiting.value = false;
 			});
 		}

@@ -8,6 +8,9 @@ import {
 	SigninWithPasskeyInitResponse,
 	SigninWithPasskeyRequest,
 	SigninWithPasskeyResponse,
+	SigninWithWalletInitResponse,
+	SigninWithWalletRequest,
+	SigninWithWalletResponse,
 	SignupPendingRequest,
 	SignupPendingResponse,
 	SignupRequest,
@@ -98,6 +101,22 @@ export type Endpoints = Overwrite<
 						],
 					];
 					$default: SigninWithPasskeyInitResponse;
+				},
+			},
+		},
+		'signin-with-wallet': {
+			req: SigninWithWalletRequest;
+			res: {
+				$switch: {
+					$cases: [
+						[
+							{
+								context: string;
+							},
+							SigninWithWalletResponse,
+						],
+					];
+					$default: SigninWithWalletInitResponse;
 				},
 			},
 		},

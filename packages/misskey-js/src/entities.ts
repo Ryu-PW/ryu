@@ -311,6 +311,21 @@ export type SigninWithPasskeyResponse = {
 	signinResponse: SigninFlowResponse & { finished: true };
 };
 
+export type SigninWithWalletRequest = {
+    walletAddress: string;
+    signedMessage: string;
+    context?: string;
+};
+
+export type SigninWithWalletInitResponse = {
+    message: string; // Message to sign for verification
+    context: string; // Context for this sign-in session
+};
+
+export type SigninWithWalletResponse = {
+    signinResponse: SigninFlowResponse & { finished: true };
+};
+
 type Values<T extends Record<PropertyKey, unknown>> = T[keyof T];
 
 export type PartialRolePolicyOverride = Partial<{[k in keyof RolePolicies]: Omit<Values<Role['policies']>, 'value'> & { value: RolePolicies[k] }}>;

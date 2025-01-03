@@ -47,6 +47,7 @@ import { RoleTimelineChannelService } from './api/stream/channels/role-timeline.
 import { ReversiChannelService } from './api/stream/channels/reversi.js';
 import { ReversiGameChannelService } from './api/stream/channels/reversi-game.js';
 import { SigninWithPasskeyApiService } from './api/SigninWithPasskeyApiService.js';
+import { SigninWithWalletApiService } from './api/SigninWithWalletApiService.js';
 
 @Module({
 	imports: [
@@ -73,6 +74,7 @@ import { SigninWithPasskeyApiService } from './api/SigninWithPasskeyApiService.j
 		RateLimiterService,
 		SigninApiService,
 		SigninWithPasskeyApiService,
+		SigninWithWalletApiService,
 		SigninService,
 		SignupApiService,
 		StreamingApiServerService,

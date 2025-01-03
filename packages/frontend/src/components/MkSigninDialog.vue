@@ -4,7 +4,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<MkModal
+  <MkModal
+	v-show="!isWalletConnectActive"
 	ref="modal"
 	:preferType="'dialog'"
 	@click="onClose"
@@ -19,7 +20,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<MkSignin :autoSet="autoSet" :message="message" :openOnRemote="openOnRemote" @login="onLogin"/>
 		</div>
 	</div>
-</MkModal>
+  </MkModal>
 </template>
 
 <script lang="ts" setup>
@@ -29,6 +30,8 @@ import type { OpenOnRemoteOptions } from '@/scripts/please-login.js';
 import MkSignin from '@/components/MkSignin.vue';
 import MkModal from '@/components/MkModal.vue';
 import { i18n } from '@/i18n.js';
+
+import { isWalletConnectActive } from '@/account.ts'
 
 withDefaults(defineProps<{
 	autoSet?: boolean;

@@ -1188,6 +1188,23 @@ export type Endpoints = Overwrite<Endpoints_2, {
             };
         };
     };
+    'signin-with-wallet': {
+	req: SigninWithWalletRequest;
+	res: {
+		$switch: {
+			$cases: [
+			[
+				{
+				context: string;
+			},
+			SigninWithWalletResponse
+			]
+			];
+			$default: SigninWithWalletInitResponse;
+		};
+	};
+    };
+
     'admin/roles/create': {
         req: Overwrite<AdminRolesCreateRequest, {
             policies: PartialRolePolicyOverride;
