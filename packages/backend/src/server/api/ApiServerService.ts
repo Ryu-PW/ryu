@@ -222,7 +222,7 @@ export class ApiServerService {
 
                 fastify.post<{
                     Body: { walletAddress: string };
-                }>('/api/initiate-wallet-challenge', async (request, reply) => {
+                }>('/signin-with-wallet/initiate-wallet-challenge', async (request, reply) => {
                     const { walletAddress } = request.body;
 
                     if (!walletAddress) {
@@ -240,7 +240,7 @@ export class ApiServerService {
 
                 fastify.post<{
                     Body: { walletAddress: string };
-                }>('/api/check-user', (request, reply) => { 
+                }>('/signin-with-wallet/check-user', (request, reply) => { 
                     this.signinWithWalletApiService.checkUser(request, reply);
                 });
 

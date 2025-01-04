@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { defineAsyncComponent, reactive, ref } from 'vue';
+import { defineAsyncComponent, reactive, ref, watch } from 'vue';
 import * as Misskey from 'misskey-js';
 import { apiUrl } from '@@/js/config.js';
 import type { MenuItem, MenuButton } from '@/types/menu.js';
@@ -15,7 +15,6 @@ import { waiting, popup, popupMenu, success, alert } from '@/os.js';
 import { misskeyApi } from '@/scripts/misskey-api.js';
 import { unisonReload, reloadChannel } from '@/scripts/unison-reload.js';
 import { misskeyApi } from '@/scripts/misskey-api.js';
-import { popup } from '@/os.js';
 
 // CHANGE: imports for walletconnect
 import { createAppKit, useAppKit, useAppKitAccount, useAppKitProvider, useDisconnect } from '@reown/appkit/vue';
@@ -23,31 +22,6 @@ import { SolanaAdapter } from '@reown/appkit-adapter-solana/vue'
 import type { Provider } from '@reown/appkit-adapter-solana'
 import { solana, solanaTestnet, solanaDevnet } from '@reown/appkit/networks';
 import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets';
-
-// Function to show popup for details which disposes itself 
-export function showPopup(message: string, timeout = 3000) {
-    const popupData = reactive({
-        showing: true,
-        message: message,
-    });
-
-    // Use Misskey's `popup` utility
-    const { dispose } = popup(
-        defineAsyncComponent(() => import('@/components/MkPopup.vue')), // Assuming `MkPopup.vue` exists
-        popupData,
-        {
-            closed: () => {
-                dispose();
-            },
-        }
-    );
-
-    // Auto-close after `timeout` milliseconds
-    setTimeout(() => {
-        popupData.showing = false;
-        dispose();
-    }, timeout);
-}
 
 async function initializeAppKit() {
   try {
@@ -90,6 +64,28 @@ export const walletAddress = ref(null);
 let walletProvider = null;
 export let walletSignature = null;
 
+/**
+ * Check if the user is registered using their wallet address.
+ * @returns {Promise<boolean>} - Whether the user is registered or not.
+ */
+export async function checkWalletUser(): Promise<boolean> {
+    if (!walletAddress.value) {
+        throw new Error("Wallet address is not set.");
+    }
+
+    try {
+        const response = await misskeyApi('signin-with-wallet/check-user', {
+            walletAddress: walletAddress.value,
+        });
+
+        if (response.error) {
+            console.error("Error checking wallet user:", response.error.message);
+            return false;
+        }
+
+        isWalletUserRegistered.value = response.isRegistered;
+        return response.isRegister
+
 export async function startWalletConnect() {
   try {
     console.log('Starting WalletConnect...');
@@ -101,24 +97,10 @@ export async function startWalletConnect() {
       walletAddress.value = appKitAccountTest.value.address || null;
       isWalletConnectActive.value = !!appKitAccountTest.value.isConnected;
 
-      // Check if the wallet user is registered
-        const response = await misskeyApi('signin-with-wallet/check-user', {
-            walletAddress: walletAddress.value,
-        });
+      // check if user exists
+      isWalletUserRegistered.value = checkWalletUser();
 
-        if (response.error) {
-            console.error("Error checking wallet user:", response.error.message);
-            isWalletUserRegistered.value = false;
-            return;
-        }
-
-        isWalletUserRegistered.value = response.isRegistered;
-	if(isWalletUserRegistered.value){
-            console.log('Wallet is registered. Proceeding...');
-        }else{
-            console.log('Wallet is registered. Registering process initialized');
-            showPopup("Wallet not registered. Please sign up!");
-        }
+      console.log('Wallet is registered. Proceeding...');
     } else {
       console.log('No wallet account connected.');
     }
@@ -141,25 +123,8 @@ export async function startWalletConnect() {
       walletAddress.value = appKitAccountRetest.value.address || null;
       isWalletConnectActive.value = !!appKitAccountRetest.value.isConnected;
     
-      // Check if the wallet user is registered
-        const response = await misskeyApi('signin-with-wallet/check-user', {
-            walletAddress: walletAddress.value,
-        });
-
-        if (response.error) {
-            console.error("Error checking wallet user:", response.error.message);
-            isWalletUserRegistered.value = false;
-            return;
-        }
-
-        isWalletUserRegistered.value = response.isRegistered
-        if(isWalletUserRegistered.value){
-            console.log('Wallet is registered. Proceeding...');
-        }else{
-            console.log('Wallet is registered. Registering process initialized');
-            showPopup("Wallet not registered. Please sign up!");    
-        }
-
+      // Automatically check if the user exists
+      isWalletUserRegistered.value = checkUser
 
     }
 
@@ -232,14 +197,6 @@ export async function signout() {
 	miLocalStorage.removeItem('account');
 	await removeAccount($i.id);
 	const accounts = await getAccounts();
-
-        // Call your wallet disconnect function here
-        try {
-		await onWalletDisconnect(); // Disconnect the wallet session
-		console.log('Wallet disconnected successfully.');
-	} catch (error) {
-		console.error('Error during wallet disconnection:', error);
-        }
 
 	//#region Remove service worker registration
 	try {

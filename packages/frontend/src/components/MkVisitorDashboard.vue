@@ -58,7 +58,7 @@
                                     data-cy-signin 
                                     @click="startWalletApprovalFlow"
                                 >
-                                    Approve
+                                    {{ isWalletUserRegistered ? 'Approve Sign in' : 'Approve Sign up' }}
                                 </MkButton>
 
                                 <MkButton 
